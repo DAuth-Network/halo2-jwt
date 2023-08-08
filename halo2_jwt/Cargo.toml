@@ -1,0 +1,23 @@
+[package]
+name = "halo2-jwt"
+version = "0.1.0"
+authors = ["Song Zhou <songz@duck.com>"]
+edition = "2021"
+
+[dependencies]
+sha2 = { version = "0.10", features = ["compress"] }
+
+halo2_maingate = { package = "maingate", git = "https://github.com/privacy-scaling-explorations/halo2wrong.git", default-features = false }
+halo2_proofs = { git = "https://github.com/privacy-scaling-explorations/halo2.git", tag = "v2023_04_20" }
+halo2curves = { git = 'https://github.com/privacy-scaling-explorations/halo2curves', tag = "0.3.2" }
+
+ff = { version = "0.13", features = ["bits"] }
+
+log = "*"
+env_logger = "*"
+
+[dev-dependencies]
+rand = "0.8"
+
+[features]
+default = []
