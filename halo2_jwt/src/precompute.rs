@@ -1,4 +1,4 @@
-use halo2curves::pasta::{pallas, Fp};
+use halo2curves::bn256::Fr;
 
 use crate::sha256::BlockWord;
 use crate::util::{find_subsequence_u8, pad_bytes_front_n_end, sha256_hash_bytes_digests, pad_sha256_bytes, bytes_to_u32_array, u32_array_to_blockwords};
@@ -56,8 +56,8 @@ impl PreComputed {
         let padded_message_jwt = pad_sha256_bytes(&self.jwt_bytes);
         let padded_message_credential = pad_sha256_bytes(&self.credential_bytes);
 
-        let u32_padded_jwt = bytes_to_u32_array(&padded_message_jwt, 0);
-        let u32_padded_credential = bytes_to_u32_array(&padded_message_credential, 0);
+        let u32_padded_jwt = bytes_to_u32_array(&padded_message_jwt);
+        let u32_padded_credential = bytes_to_u32_array(&padded_message_credential);
 
         [
             u32_array_to_blockwords(&u32_padded_jwt),
@@ -66,8 +66,8 @@ impl PreComputed {
     }
 
     pub fn expected_digest_as_blockwords(&self) -> [Vec<BlockWord>; 2] {
-        let digest_jwt = bytes_to_u32_array(&self.digest_jwt, 0);
-        let digest_credential = bytes_to_u32_array(&self.digest_credential, 0);
+        let digest_jwt = bytes_to_u32_array(&self.digest_jwt);
+        let digest_credential = bytes_to_u32_array(&self.digest_credential);
 
         [
             u32_array_to_blockwords(&digest_jwt),
@@ -75,21 +75,21 @@ impl PreComputed {
         ]
     }
 
-    pub fn public_inputs(&self) -> Vec<Fp> {
+    pub fn public_inputs(&self) -> Vec<Fr> {
         let mut result = Vec::with_capacity(16);
-        let digest_jwt_u32 = bytes_to_u32_array(&self.digest_jwt, 0);
-        let digest_credential_u32 = bytes_to_u32_array(&self.digest_credential, 0);
+        let digest_jwt_u32 = bytes_to_u32_array(&self.digest_jwt);
+        let digest_credential_u32 = bytes_to_u32_array(&self.digest_credential);
 
         for i in 0..8 {
-            result.push(pallas::Base::from(digest_jwt_u32[i] as u64));
+            result.push(Fr::from(digest_jwt_u32[i] as u64));
         }
 
         for i in 0..8 {
-            result.push(pallas::Base::from(digest_credential_u32[i] as u64));
+            result.push(Fr::from(digest_credential_u32[i] as u64));
         }
 
-        result.push(pallas::Base::from(self.segment_start_offset as u64));
-        result.push(pallas::Base::from(self.segment_end_offset as u64));
+        result.push(Fr::from(self.segment_start_offset as u64));
+        result.push(Fr::from(self.segment_end_offset as u64));
 
         result
     }

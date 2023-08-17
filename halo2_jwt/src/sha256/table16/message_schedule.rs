@@ -6,7 +6,7 @@ use halo2_proofs::{
     plonk::{Advice, Column, ConstraintSystem, Error, Selector},
     poly::Rotation,
 };
-use halo2curves::pasta::pallas;
+use halo2curves::bn256::Fr;
 
 mod schedule_gates;
 mod schedule_util;
@@ -71,7 +71,7 @@ impl MessageScheduleConfig {
     /// itself.
     #[allow(clippy::many_single_char_names)]
     pub(super) fn configure(
-        meta: &mut ConstraintSystem<pallas::Base>,
+        meta: &mut ConstraintSystem<Fr>,
         lookup: SpreadInputs,
         message_schedule: Column<Advice>,
         extras: [Column<Advice>; 6],
@@ -304,7 +304,7 @@ impl MessageScheduleConfig {
     #[allow(clippy::type_complexity)]
     pub(super) fn process(
         &self,
-        layouter: &mut impl Layouter<pallas::Base>,
+        layouter: &mut impl Layouter<Fr>,
         input: [BlockWord; BLOCK_SIZE],
     ) -> Result<
         (
@@ -402,13 +402,13 @@ mod tests {
         dev::MockProver,
         plonk::{Circuit, ConstraintSystem, Error},
     };
-    use halo2curves::pasta::pallas;
+    use halo2curves::bn256::Fr;
 
     #[test]
     fn message_schedule() {
         struct MyCircuit {}
 
-        impl Circuit<pallas::Base> for MyCircuit {
+        impl Circuit<Fr> for MyCircuit {
             type Config = Table16Config;
             type FloorPlanner = SimpleFloorPlanner;
             #[cfg(feature = "circuit-params")]
@@ -418,14 +418,14 @@ mod tests {
                 MyCircuit {}
             }
 
-            fn configure(meta: &mut ConstraintSystem<pallas::Base>) -> Self::Config {
+            fn configure(meta: &mut ConstraintSystem<Fr>) -> Self::Config {
                 Table16Chip::configure(meta)
             }
 
             fn synthesize(
                 &self,
                 config: Self::Config,
-                mut layouter: impl Layouter<pallas::Base>,
+                mut layouter: impl Layouter<Fr>,
             ) -> Result<(), Error> {
                 // Load lookup table
                 SpreadTableChip::load(config.lookup.clone(), &mut layouter)?;
@@ -448,7 +448,7 @@ mod tests {
 
         let circuit: MyCircuit = MyCircuit {};
 
-        let prover = match MockProver::<pallas::Base>::run(17, &circuit, vec![]) {
+        let prover = match MockProver::<Fr>::run(17, &circuit, vec![]) {
             Ok(prover) => prover,
             Err(e) => panic!("{:?}", e),
         };

@@ -4,13 +4,13 @@ use halo2_proofs::{
     circuit::{Region, Value},
     plonk::{Advice, Column, Error},
 };
-use halo2curves::pasta::pallas;
+use halo2curves::bn256::Fr;
 
 impl CompressionConfig {
     #[allow(clippy::many_single_char_names)]
     pub fn assign_digest(
         &self,
-        region: &mut Region<'_, pallas::Base>,
+        region: &mut Region<'_, Fr>,
         state: State,
     ) -> Result<[BlockWord; DIGEST_SIZE], Error> {
         let a_3 = self.extras[0];
@@ -39,7 +39,7 @@ impl CompressionConfig {
             || "a",
             a_5,
             abcd_row,
-            || a.map(|a| pallas::Base::from(a as u64)),
+            || a.map(|a| Fr::from(a as u64)),
         )?;
 
         let b = self.assign_digest_word(region, abcd_row, a_6, a_7, a_8, b.dense_halves)?;
@@ -58,7 +58,7 @@ impl CompressionConfig {
             || "e",
             a_5,
             efgh_row,
-            || e.map(|e| pallas::Base::from(e as u64)),
+            || e.map(|e| Fr::from(e as u64)),
         )?;
 
         let f = self.assign_digest_word(region, efgh_row, a_6, a_7, a_8, f.dense_halves)?;
@@ -79,7 +79,7 @@ impl CompressionConfig {
 
     fn assign_digest_word(
         &self,
-        region: &mut Region<'_, pallas::Base>,
+        region: &mut Region<'_, Fr>,
         row: usize,
         lo_col: Column<Advice>,
         hi_col: Column<Advice>,
@@ -94,7 +94,7 @@ impl CompressionConfig {
             || "word",
             word_col,
             row,
-            || val.map(|val| pallas::Base::from(val as u64)),
+            || val.map(|val| Fr::from(val as u64)),
         )?;
 
         Ok(val)

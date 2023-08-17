@@ -75,20 +75,11 @@ pub fn bytes_to_u32(origin: &[u8]) -> u32 {
     acc
 }
 
-pub fn bytes_to_u32_array(origin: &[u8], front_pad: usize) -> Vec<u32> {
+pub fn bytes_to_u32_array(origin: &[u8]) -> Vec<u32> {
     let len = origin.len();
     let mut offset = 0;
     
     let mut result: Vec<u32> = Vec::new();
-    
-    if front_pad != 0 {
-        result.push(
-            bytes_to_u32(&origin[0..4 - front_pad])
-        );
-        
-        offset = 4 - front_pad;
-    }
-    
     loop {
         if offset + 4 > len {
             break;
@@ -121,25 +112,6 @@ pub fn u32_array_to_blockwords(origin: &[u32]) -> Vec<BlockWord> {
 pub fn find_subsequence_u8(haystack: &[u8], needle: &[u8]) -> Option<usize> {
     haystack.windows(needle.len()).position(|window| window == needle)
 }
-
-// pub fn sha256_hash_u32_digests(msg: &[u8]) -> [u32; 8] {
-//     use sha2::{Digest, Sha256};
-
-//     let mut hasher = Sha256::new();
-//     hasher.update(msg);
-//     let digest = hasher.finalize();
-
-//     [
-//         u32::from_be_bytes(digest[0..4].try_into().unwrap()),
-//         u32::from_be_bytes(digest[4..8].try_into().unwrap()),
-//         u32::from_be_bytes(digest[8..12].try_into().unwrap()),
-//         u32::from_be_bytes(digest[12..16].try_into().unwrap()),
-//         u32::from_be_bytes(digest[16..20].try_into().unwrap()),
-//         u32::from_be_bytes(digest[20..24].try_into().unwrap()),
-//         u32::from_be_bytes(digest[24..28].try_into().unwrap()),
-//         u32::from_be_bytes(digest[28..32].try_into().unwrap()), 
-//     ]
-// }
 
 pub fn sha256_hash_bytes_digests(msg: &[u8]) -> [u8; 32] {
     use sha2::{Digest, Sha256};

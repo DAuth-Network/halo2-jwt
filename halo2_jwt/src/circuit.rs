@@ -3,7 +3,7 @@ use halo2_proofs::{
     circuit::{Layouter, SimpleFloorPlanner, Value},
     plonk::{Circuit, ConstraintSystem, Error},
 };
-use halo2curves::pasta::pallas;
+use halo2curves::bn256::Fr;
 
 use crate::precompute::PreComputed;
 use crate::sha256::{Table16Config, Table16Chip, Sha256};
@@ -26,9 +26,13 @@ impl JwtCircuit {
     pub fn new(precomputed: PreComputed) -> Self {
         Self { precomputed }
     }
+
+    pub fn num_instance() -> Vec<usize> {
+        vec![18]
+    }
 }
 
-impl Circuit<pallas::Base> for JwtCircuit {
+impl Circuit<Fr> for JwtCircuit {
 
     type Config = JwtCircuitConfig;
     type FloorPlanner = SimpleFloorPlanner;
@@ -37,14 +41,14 @@ impl Circuit<pallas::Base> for JwtCircuit {
         Self::default()
     }
 
-    fn configure(meta: &mut ConstraintSystem<pallas::Base>) -> Self::Config {
+    fn configure(meta: &mut ConstraintSystem<Fr>) -> Self::Config {
         Self::Config {
             sha256_config: Table16Chip::configure(meta), 
-            maingate_config: MainGate::<pallas::Base>::configure(meta),
+            maingate_config: MainGate::<Fr>::configure(meta),
         }
     }
 
-    fn synthesize(&self, config: Self::Config, mut layouter: impl Layouter<pallas::Base>) -> Result<(), Error> {
+    fn synthesize(&self, config: Self::Config, mut layouter: impl Layouter<Fr>) -> Result<(), Error> {
 
         /* START Pre-Constrained Zone */
         let [preimage_jwt, preimage_credential] = self.precomputed.preimage_as_blockwords();
@@ -60,7 +64,7 @@ impl Circuit<pallas::Base> for JwtCircuit {
         let sha256_chip = Table16Chip::construct(config.sha256_config.clone());
         Table16Chip::load(config.sha256_config.clone(), &mut layouter.namespace(|| "table16_chip"))?;
 
-        let gate = MainGate::<pallas::Base>::new(config.maingate_config.clone());
+        let gate = MainGate::<Fr>::new(config.maingate_config.clone());
         // digest + IV = expected_digest
         let partial_digest_jwt = Sha256::digest(
             sha256_chip.clone(), 
@@ -94,12 +98,12 @@ impl Circuit<pallas::Base> for JwtCircuit {
                     // 1. load both JWTand Credential value into the constrain sys
                     let jwt_value = gate.assign_value(ctx,
                         preimage_jwt[segment_location_start].0
-                            .map(|x| pallas::Base::from(x as u64))
+                            .map(|x| Fr::from(x as u64))
                     )?;
 
                     let credential_value = gate.assign_value(ctx,
                         preimage_credential[0].0
-                            .map(|x| pallas::Base::from(x as u64))
+                            .map(|x| Fr::from(x as u64))
                     )?;
 
                     // 2. sub JWT to Credential -> to get 0x0102_0000 and convert to be_bits
@@ -123,10 +127,10 @@ impl Circuit<pallas::Base> for JwtCircuit {
 
                     let jwt_value = gate.assign_value(ctx, 
                         preimage_jwt[segment_location_start + segment_offset].0
-                        .map(|x| pallas::Base::from(x as u64)))?;
+                        .map(|x| Fr::from(x as u64)))?;
                     let credential_value = gate.assign_value(ctx, 
                         preimage_credential[segment_offset].0
-                        .map(|x| pallas::Base::from(x as u64)))?;
+                        .map(|x| Fr::from(x as u64)))?;
 
 
                     log::info!("{:?} {:?} {:?}", segment_offset, jwt_value, credential_value);
@@ -141,12 +145,12 @@ impl Circuit<pallas::Base> for JwtCircuit {
 
                     let jwt_value = gate.assign_value(ctx,
                         preimage_jwt[segment_location_end].0
-                            .map(|x| pallas::Base::from(x as u64))
+                            .map(|x| Fr::from(x as u64))
                     )?;
 
                     let credential_value = gate.assign_value(ctx,
                         preimage_credential[segment_offset].0
-                            .map(|x| pallas::Base::from(x as u64))
+                            .map(|x| Fr::from(x as u64))
                     )?;
 
                    // 2. sub JWT to Credential -> to get 0x0000_0304 and convert to be_bits
@@ -165,8 +169,8 @@ impl Circuit<pallas::Base> for JwtCircuit {
                 // assign segment_location_start and segment_location_end to the constrain 
                 // awaiting to be exposed as public inputs
                 (
-                    gate.assign_value(ctx, Value::known(pallas::Base::from(segment_start_offset as u64)))?,
-                    gate.assign_value(ctx, Value::known(pallas::Base::from(segment_end_offset as u64)))?
+                    gate.assign_value(ctx, Value::known(Fr::from(segment_start_offset as u64)))?,
+                    gate.assign_value(ctx, Value::known(Fr::from(segment_end_offset as u64)))?
                 )
             };
 
@@ -182,12 +186,12 @@ impl Circuit<pallas::Base> for JwtCircuit {
                     log::info!("[Constrained] Iterating SHA256 Proof at Loc {:?}", index);
 
                     // 1. assign digest to proof
-                    let partial_digest_jwt = gate.assign_value(ctx, partial_digest_jwt.0[index].0.map(|x| pallas::Base::from(x as u64)))?;
-                    let partial_digest_credential = gate.assign_value(ctx, partial_digest_credential.0[index].0.map(|x| pallas::Base::from(x as u64)))?;
+                    let partial_digest_jwt = gate.assign_value(ctx, partial_digest_jwt.0[index].0.map(|x| Fr::from(x as u64)))?;
+                    let partial_digest_credential = gate.assign_value(ctx, partial_digest_credential.0[index].0.map(|x| Fr::from(x as u64)))?;
 
                     // 2. assign expected digest 
-                    let expected_digest_jwt = gate.assign_value(ctx, expected_digest_jwt[index].0.map(|x| pallas::Base::from(x as u64)))?;
-                    let expected_digest_credential = gate.assign_value(ctx, expected_digest_credential[index].0.map(|x| pallas::Base::from(x as u64)))?;
+                    let expected_digest_jwt = gate.assign_value(ctx, expected_digest_jwt[index].0.map(|x| Fr::from(x as u64)))?;
+                    let expected_digest_credential = gate.assign_value(ctx, expected_digest_credential[index].0.map(|x| Fr::from(x as u64)))?;
 
                     // 3. compare
                     gate.assert_equal(ctx, &partial_digest_jwt, &expected_digest_jwt)?;

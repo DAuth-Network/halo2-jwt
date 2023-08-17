@@ -6,7 +6,7 @@ use halo2_proofs::{
     plonk::{Advice, Column, ConstraintSystem, Error, TableColumn},
     poly::Rotation,
 };
-use halo2curves::pasta::pallas;
+use halo2curves::bn256::Fr;
 use std::convert::TryInto;
 use std::marker::PhantomData;
 
@@ -76,7 +76,7 @@ pub(super) struct SpreadVar<const DENSE: usize, const SPREAD: usize> {
 
 impl<const DENSE: usize, const SPREAD: usize> SpreadVar<DENSE, SPREAD> {
     pub(super) fn with_lookup(
-        region: &mut Region<'_, pallas::Base>,
+        region: &mut Region<'_, Fr>,
         cols: &SpreadInputs,
         row: usize,
         word: Value<SpreadWord<DENSE, SPREAD>>,
@@ -89,7 +89,7 @@ impl<const DENSE: usize, const SPREAD: usize> SpreadVar<DENSE, SPREAD> {
             || "tag",
             cols.tag,
             row,
-            || tag.map(|tag| pallas::Base::from(tag as u64)),
+            || tag.map(|tag| Fr::from(tag as u64)),
         )?;
 
         let dense =
@@ -102,7 +102,7 @@ impl<const DENSE: usize, const SPREAD: usize> SpreadVar<DENSE, SPREAD> {
     }
 
     pub(super) fn without_lookup(
-        region: &mut Region<'_, pallas::Base>,
+        region: &mut Region<'_, Fr>,
         dense_col: Column<Advice>,
         dense_row: usize,
         spread_col: Column<Advice>,

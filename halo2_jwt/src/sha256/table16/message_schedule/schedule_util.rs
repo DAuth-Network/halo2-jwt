@@ -4,7 +4,7 @@ use halo2_proofs::{
     circuit::{Region, Value},
     plonk::Error,
 };
-use halo2curves::pasta::pallas;
+use halo2curves::bn256::Fr;
 
 #[cfg(test)]
 use super::super::{super::BLOCK_SIZE, BlockWord, ROUNDS};
@@ -152,7 +152,7 @@ impl MessageScheduleConfig {
     // Assign a word and its hi and lo halves
     pub fn assign_word_and_halves(
         &self,
-        region: &mut Region<'_, pallas::Base>,
+        region: &mut Region<'_, Fr>,
         word: Value<u32>,
         word_idx: usize,
     ) -> Result<(AssignedBits<32>, (AssignedBits<16>, AssignedBits<16>)), Error> {
