@@ -7,17 +7,25 @@ edition = "2021"
 [dependencies]
 sha2 = { version = "0.10", features = ["compress"] }
 
-halo2_maingate = { package = "maingate", git = "https://github.com/privacy-scaling-explorations/halo2wrong.git", default-features = false }
 halo2_proofs = { git = "https://github.com/privacy-scaling-explorations/halo2.git", tag = "v2023_04_20" }
 halo2curves = { git = 'https://github.com/privacy-scaling-explorations/halo2curves', tag = "0.3.2" }
 
-# snark-verifier = { git = "https://github.com/privacy-scaling-explorations/snark-verifier.git" }
+halo2_ecc = { package = "ecc", git = "https://github.com/privacy-scaling-explorations/halo2wrong", tag = "v2023_04_20", default-features = false}
+halo2_maingate = { package = "maingate", git = "https://github.com/privacy-scaling-explorations/halo2wrong.git", tag = "v2023_04_20", default-features = false }
+
+snark-verifier = { git = "https://github.com/privacy-scaling-explorations/snark-verifier.git" }
+snark-verifier-sdk = { git = "https://github.com/privacy-scaling-explorations/snark-verifier.git" }
+
+itertools = "0.10.3"
 
 ff = { version = "0.13", features = ["bits"] }
 rand = "0.8"
 
 log = "*"
 env_logger = "*"
+
+# only used for timer, should be replaced later
+ark-std = { version = "0.3.0", features = ["print-trace"] }
 
 [dev-dependencies]
 rand = "0.8"

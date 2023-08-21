@@ -10,10 +10,7 @@ use crate::sha256::{Table16Config, Table16Chip, Sha256};
 
 #[derive(Debug, Clone)]
 pub struct JwtCircuitConfig {
-    // contains only the Table16 chip
     pub sha256_config: Table16Config,
-
-    // inclusion proof config 
     pub maingate_config: MainGateConfig,
 }
 
@@ -27,8 +24,8 @@ impl JwtCircuit {
         Self { precomputed }
     }
 
-    pub fn num_instance() -> Vec<usize> {
-        vec![18]
+    pub fn public_inputs(&self) -> Vec<Fr> {
+        self.precomputed.public_inputs()
     }
 }
 

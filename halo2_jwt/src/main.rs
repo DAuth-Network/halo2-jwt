@@ -1,133 +1,21 @@
-// use halo2curves::bn256::{Bn256, Fq, Fr, G1Affine};
-// use rand::rngs::OsRng;
-
-// use halo2_proofs::{
-//     dev::MockProver,
-//     plonk::{
-//         create_proof, keygen_pk, keygen_vk, verify_proof, Circuit,
-//         ProvingKey, VerifyingKey,
-//     },
-//     poly::{
-//         commitment::{Params, ParamsProver},
-//         kzg::{
-//             commitment::{KZGCommitmentScheme, ParamsKZG},
-//             multiopen::{ProverGWC, VerifierGWC},
-//             strategy::AccumulatorStrategy,
-//         },
-//         VerificationStrategy,
-//     },
-//     transcript::{TranscriptReadBuffer, TranscriptWriterBuffer},
-// };
-// use snark_verifier::{
-//     loader::evm::{self, deploy_and_call, encode_calldata, EvmLoader},
-//     pcs::kzg::{Gwc19, KzgAs},
-//     system::halo2::{compile, transcript::evm::EvmTranscript, Config},
-//     verifier::{self, SnarkVerifier},
-// };
-// use std::rc::Rc;
-
-// type PlonkVerifier = verifier::plonk::PlonkVerifier<KzgAs<Bn256, Gwc19>>;
-
+use std::path::Path;
 
 use halo2_jwt::circuit::JwtCircuit;
 use halo2_jwt::precompute::PreComputed;
+
 use halo2_proofs::dev::MockProver;
-use halo2curves::bn256::Fr;
 
-// fn gen_srs(k: u32) -> ParamsKZG<Bn256> {
-//     ParamsKZG::<Bn256>::setup(k, OsRng)
-// }
-
-// fn gen_pk<C: Circuit<Fr>>(params: &ParamsKZG<Bn256>, circuit: &C) -> ProvingKey<G1Affine> {
-//     let vk = keygen_vk(params, circuit).unwrap();
-//     keygen_pk(params, vk, circuit).unwrap()
-// }
-
-// fn gen_proof<C: Circuit<Fr>>(
-//     params: &ParamsKZG<Bn256>,
-//     pk: &ProvingKey<G1Affine>,
-//     circuit: C,
-//     instances: Vec<Vec<Fr>>,
-// ) -> Vec<u8> {
-//     MockProver::run(params.k(), &circuit, instances.clone())
-//         .unwrap()
-//         .assert_satisfied();
-
-//     let instances_ref = &instances
-//         .iter()
-//         .map(|instances| instances.as_slice())
-//         .collect::<Vec<_>>();
-
-//     let proof = {
-//         let mut transcript = TranscriptWriterBuffer::<_, G1Affine, _>::init(Vec::new());
-//         create_proof::<KZGCommitmentScheme<Bn256>, ProverGWC<_>, _, _, EvmTranscript<_, _, _, _>, _>(
-//             params,
-//             pk,
-//             &[circuit],
-//             &[instances_ref],
-//             OsRng,
-//             &mut transcript,
-//         )
-//         .unwrap();
-//         transcript.finalize()
-//     };
-
-//     let accept = {
-//         let mut transcript = TranscriptReadBuffer::<_, G1Affine, _>::init(proof.as_slice());
-//         VerificationStrategy::<_, VerifierGWC<_>>::finalize(
-//             verify_proof::<_, VerifierGWC<_>, _, EvmTranscript<_, _, _, _>, _>(
-//                 params.verifier_params(),
-//                 pk.get_vk(),
-//                 AccumulatorStrategy::new(params.verifier_params()),
-//                 &[instances_ref],
-//                 &mut transcript,
-//             )
-//             .unwrap(),
-//         )
-//     };
-//     assert!(accept);
-
-//     proof
-// }
-
-// fn gen_evm_verifier(
-//     params: &ParamsKZG<Bn256>,
-//     vk: &VerifyingKey<G1Affine>,
-//     num_instance: Vec<usize>,
-// ) -> Vec<u8> {
-//     let protocol = compile(
-//         params,
-//         vk,
-//         Config::kzg().with_num_instance(num_instance.clone()),
-//     );
-//     let vk = (params.get_g()[0], params.g2(), params.s_g2()).into();
-
-//     let loader = EvmLoader::new::<Fq, Fr>();
-//     let protocol = protocol.loaded(&loader);
-//     let mut transcript = EvmTranscript::<_, Rc<EvmLoader>, _, _>::new(&loader);
-
-//     let instances = transcript.load_instances(num_instance);
-//     let proof = PlonkVerifier::read_proof(&vk, &protocol, &instances, &mut transcript).unwrap();
-//     PlonkVerifier::verify(&vk, &protocol, &instances, &proof).unwrap();
-
-//     println!("Yul Code {:?}", loader.yul_code());
-//     evm::compile_yul(&loader.yul_code())
-// }
-
-// fn evm_verify(deployment_code: Vec<u8>, instances: Vec<Vec<Fr>>, proof: Vec<u8>) {
-//     let calldata = encode_calldata(&instances, &proof);
-
-//     println!("calldata len {:?}", calldata.len());
-//     let gas_cost = deploy_and_call(deployment_code, calldata).unwrap();
-//     dbg!(gas_cost);
-// }
+use snark_verifier_sdk::{SHPLONK, gen_pk};
+use snark_verifier_sdk::halo2::aggregation::AggregationCircuit;
+use snark_verifier_sdk::halo2::{gen_srs, gen_snark_shplonk};
+use ark_std::{end_timer, start_timer};
 
 fn main() {
     env_logger::init(); 
-    let k = 17;
-    // let params = gen_srs(17);
+    let k_app = 17;
+    let k_agg = 22;
 
-    // Instantiate the circuit with the private inputs.
+    /* START: Setup the circuit & local pre-computed data */
     let jwt = "{\"iss\":\"https://dev-9h47ajc9.us.au111th0.com/\",\"sub\":\"twitter|337834122\",\"aud\":\"123\",\"iat\":1639173028,\"exp\":1639209028,\"nonce\":\"44017a89\"}";
     let credential = "twitter|337834122";
 
@@ -135,16 +23,44 @@ fn main() {
     let public_inputs = precomputed.public_inputs();
     let circuit = JwtCircuit::new(precomputed);
 
-    // let pk = gen_pk(&params, &circuit);
-    // let deployment_code = gen_evm_verifier(&params, pk.get_vk(), JwtCircuit::num_instance());
+    // pre-run check
+    MockProver::run(k_app, &circuit.clone(), vec![public_inputs])
+        .expect("Circuit Construction Failed")
+        .assert_satisfied();
+    log::info!("JWT circuit Pre-flight check passed. Ready to go.");
+    /* END: Setup the circuit & local pre-computed data */
 
-    // println!("Deployment Code {:?}", deployment_code.len());
-    // let proof = gen_proof(&params, &pk, circuit.clone(), vec![public_inputs.clone()]);
-    // evm_verify(deployment_code, vec![public_inputs], proof);
+    /* START: Setup SRS + Generate pk & vk */
+    // 0. output paths
+    let app_pk_path = Path::new("./artifacts/app.pk");
+    let app_snark_path = Path::new("./artifacts/app.snark");
+    let agg_pk_path = Path::new("./artifacts/agg.pk");
+    let agg_snark_path = Path::new("./artifacts/agg.snark");
 
-    // Given the correct public input, our circuit will verify.
-    let prover: MockProver<Fr> = MockProver::run(k, &circuit, vec![public_inputs]).expect("Circuit Construction Failed");
-    assert_eq!(prover.verify(), Ok(()));
+    // 1. generate params
+    let params_app = gen_srs(k_app);
+    let params_agg = gen_srs(k_agg);
+    log::info!("SRS Parameter generated or readed");
+
+    // 2. generate application pk & snark
+    let app_snark_gen_timer = start_timer!(|| "app_snark_gen");
+    let pk_app = gen_pk(&params_app, &circuit, Some(app_pk_path));
+    let snark_app = gen_snark_shplonk(&params_app, &pk_app, circuit, Some(app_snark_path));
+    end_timer!(app_snark_gen_timer);
+    log::info!("Application pk & snark generated");
+
+    // 3. generate aggreation pk & snark
+    let aggregation_circuit = AggregationCircuit::<SHPLONK>::new(&params_agg, vec![snark_app]);
+    
+    let agg_snark_gen_timer = start_timer!(|| "agg_snark_gen");
+    let agg_pk = gen_pk(&params_agg, &aggregation_circuit, Some(agg_pk_path));
+    
+    // remove previously generated snark - let's start fresh
+    std::fs::remove_file(agg_snark_path).unwrap_or_default();
+    let _agg_snark = gen_snark_shplonk(&params_agg, &agg_pk, aggregation_circuit, Some(agg_snark_path));
+    end_timer!(agg_snark_gen_timer);
+    log::info!("Aggregation pk & snark generated");
+    /* END: Setup SRS + Generate pk & vk */
 
     println!("Done!");
 }

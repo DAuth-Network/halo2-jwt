@@ -4,3 +4,10 @@ Cargo.lock
 .vscode
 **/*.html
 .DS_Store
+
+artifacts/agg.pk
+artifacts/app.pk
+artifacts/app.snark
+artifacts/agg.snark
+
+params/*
