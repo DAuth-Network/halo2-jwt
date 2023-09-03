@@ -1,6 +1,9 @@
-## halo2-jwt
-
+## Breif
 Verify a JWT with Halo2!
+
+## Concept Flow
+
+![openid3](https://github.com/DAuth-Network/halo2-jwt/assets/13097363/182518b5-0238-4f3e-a245-3f9f37c438d3)
 
 ## Run a Test 
 
